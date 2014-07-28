@@ -105,6 +105,15 @@ module Urbanairship
       do_request(:get, "/api/device_tokens/?limit=100000", :authenticate_with => :master_secret)
     end
 
+    def device_tokens_active_with_alias
+      reponse_hash_device_tokens = do_request(:get, "/api/device_tokens/?limit=100000", :authenticate_with => :master_secret)
+      device_tokens_only_active = []
+      reponse_hash_device_tokens["device_tokens"].each do |one_device_token|
+        device_tokens_only_active << {device_token: one_device_token["device_token"], device_alias: one_device_token["alias"]} if one_device_token["active"] == true && one_device_token["alias"].present?
+      end
+      device_tokens_only_active
+    end
+
     def device_tokens_count
       do_request(:get, "/api/device_tokens/count/", :authenticate_with => :master_secret)
     end

@@ -102,7 +102,7 @@ module Urbanairship
     end
 
     def device_tokens
-      do_request(:get, "/api/device_tokens/", :authenticate_with => :master_secret)
+      do_request(:get, "/api/device_tokens/?limit=100000", :authenticate_with => :master_secret)
     end
 
     def device_tokens_count

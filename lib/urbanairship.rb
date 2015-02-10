@@ -101,17 +101,22 @@ module Urbanairship
       do_request(:post, "/api/tags/#{params[:tag]}", :body => {provider_field => {:remove => [params[:device_token]]}}.to_json, :authenticate_with => :master_secret)
     end
 
-    def device_tokens
-      do_request(:get, "/api/device_tokens/?limit=100000", :authenticate_with => :master_secret)
+    def device_tokens #iOS
+      request_get_tokens(:ios)
+    end
+
+    def apid_tokens #Android
+      request_get_tokens(:android)
     end
 
     def device_aliases
-      reponse_hash_device_tokens = do_request(:get, "/api/device_tokens/?limit=100000", :authenticate_with => :master_secret)
-      device_tokens_only_active = []
-      reponse_hash_device_tokens["device_tokens"].each do |one_device_token|
-        device_tokens_only_active << one_device_token["alias"].to_i if one_device_token["active"] == true && one_device_token["alias"].present?
-      end
-      device_tokens_only_active
+      reponse_hash_device_tokens = device_tokens['device_tokens']
+      response_list.map { |device| device['active'] == true ? device['alias'].try(:to_i) : nil }.compact
+    end
+
+    def apid_aliases
+      response_list = apid_tokens['apids']
+      response_list.map { |device| device['active'] == true ? device['alias'].try(:to_i) : nil }.compact
     end
 
     def device_tokens_count
@@ -139,6 +144,12 @@ module Urbanairship
     end
 
     private
+
+    def request_get_tokens(device)
+      path = 'device_tokens' if device == :ios
+      path = 'apids' if device == :android
+      do_request(:get, "/api/#{path}/?limit=200000", :authenticate_with => :master_secret)
+    end
 
     def do_request(http_method, path, options = {})
       verify_configuration_values(:application_key, options[:authenticate_with])

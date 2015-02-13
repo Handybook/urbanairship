@@ -110,7 +110,7 @@ module Urbanairship
     end
 
     def device_aliases
-      reponse_hash_device_tokens = device_tokens['device_tokens']
+      response_list = device_tokens['device_tokens']
       response_list.map { |device| device['active'] == true ? device['alias'].try(:to_i) : nil }.compact
     end
 

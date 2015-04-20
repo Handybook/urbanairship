@@ -101,21 +101,21 @@ module Urbanairship
       do_request(:post, "/api/tags/#{params[:tag]}", :body => {provider_field => {:remove => [params[:device_token]]}}.to_json, :authenticate_with => :master_secret)
     end
 
-    def device_tokens #iOS
+    def device_tokens #iOS #will return only first 20000
       request_get_tokens(:ios)
     end
 
-    def apid_tokens #Android
+    def apid_tokens #Android #will return only first 20000
       request_get_tokens(:android)
     end
 
     def device_aliases
-      response_list = device_tokens['device_tokens']
+      response_list = request_get_all_tokens_with_query_string(:ios)
       response_list.map { |device| device['active'] == true ? device['alias'].try(:to_i) : nil }.compact
     end
 
     def apid_aliases
-      response_list = apid_tokens['apids']
+      response_list = request_get_all_tokens_with_query_string(:android)
       response_list.map { |device| device['active'] == true ? device['alias'].try(:to_i) : nil }.compact
     end
 
@@ -146,9 +146,29 @@ module Urbanairship
     private
 
     def request_get_tokens(device)
-      path = 'device_tokens' if device == :ios
-      path = 'apids' if device == :android
+      path = case device_type
+      when :ios then 'device_tokens'
+      when :android then 'apids'
+      end
+
       do_request(:get, "/api/#{path}/?limit=200000", :authenticate_with => :master_secret)
+    end
+
+    def request_get_all_tokens_with_query_string(device_type, devices = [], query_string = 'limit=10000') #will return array of devices
+      path = case device_type
+      when :ios then 'device_tokens'
+      when :android then 'apids'
+      end
+
+      response = do_request(:get, "/api/#{path}/?#{query_string}", :authenticate_with => :master_secret).try(:with_indifferent_access)
+      devices += response[path] if response[path]
+
+      next_page_url = response[:next_page]
+      if next_page_url.present?
+        query_string = URI.parse(next_page_url).query
+        devices = request_get_all_tokens_with_query_string(device_type, devices, query_string)
+      end
+      devices
     end
 
     def do_request(http_method, path, options = {})
